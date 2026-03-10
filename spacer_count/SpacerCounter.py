@@ -97,7 +97,10 @@ class SpacerCounter:
             elif spacer != "":
                 unknown_spacer_list.append((id, spacer))
         
-        spacer_tup = tuple(self.spacer_df['sequence'].tolist())
+        # sort the reference spacers by their count in descending order, and convert to tuple for caching
+        # This way, the most common spacers will be aligned first, reducing the times of alignment needed.
+        ref_spaer_list = [k for k, v in sorted(seq_count_dict.items(), key=lambda item: item[1], reverse=True)]
+        spacer_tup = tuple(ref_spaer_list)
         align2correct_partial = partial(align2correct, spacer_tup)
 
         if threads > 1:
