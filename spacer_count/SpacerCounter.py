@@ -1,5 +1,6 @@
 import gzip
 import re
+import warnings
 from multiprocessing import Pool
 from functools import lru_cache, partial
 
@@ -15,6 +16,13 @@ class SpacerCounter:
 
         if len(left_flanking_seq) < 5 or len(right_flanking_seq) < 5:
             raise Exception("Flanking sequences must be at least 5 bases long.")
+        left_flanking_seq = left_flanking_seq.upper()
+        right_flanking_seq = right_flanking_seq.upper()
+        
+        # Warn if there are too many N bases in the flanking sequences, which might lead to too many false positives.
+        all_flanking = left_flanking_seq + right_flanking_seq
+        if len(all_flanking) - all_flanking.count('N') < 8:
+            warnings.warn("Flanking sequences might contain too much N bases ({} Ns).".format(all_flanking.count('N')), UserWarning)
         
         if spacer_info_csv is not None:
             print("Using provided spacer info CSV; ignoring spacer_size parameter.")

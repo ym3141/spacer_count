@@ -1,6 +1,5 @@
-def main():
-    print("Hello from spacer-count!")
+from spacer_count.SpacerCounter import SpacerCounter
 
 
 if __name__ == "__main__":
-    main()
+    counter = SpacerCounter(['GANNN', 'ACNNN'], spacer_size_flex=1, spacer_info_csv='data/spacer_info.csv')

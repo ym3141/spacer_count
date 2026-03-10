@@ -1,5 +1,5 @@
 import pytest
-from src.spacer_counter import SpacerCounter, load_fasta_to_seqs, align2correct
+from spacer_count.SpacerCounter import SpacerCounter, load_fasta_to_seqs, align2correct
 import re
 
 class TestExtractSpacers:
@@ -13,6 +13,10 @@ class TestExtractSpacers:
         assert id_sequences[0][0] == '0_NNB8S3_1'
 
     def test_counter(self):
+
+        with pytest.warns(Warning):
+            counter = SpacerCounter(['GANNN', 'ACNNN'], spacer_size_flex=1, spacer_info_csv='data/spacer_info.csv')
+
         counter = SpacerCounter(['GATCT', 'ACGCG'], spacer_size_flex=1, spacer_info_csv='data/spacer_info.csv')
         assert counter.spacer_df is not None
         assert counter.spacer_df.shape == (254, 3)
