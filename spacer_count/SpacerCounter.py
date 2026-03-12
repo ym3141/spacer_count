@@ -1,6 +1,7 @@
 import gzip
 import re
 import warnings
+import time
 from multiprocessing import Pool
 from functools import lru_cache, partial
 
@@ -48,8 +49,8 @@ class SpacerCounter:
 
         self.spacer_size_flex = spacer_size_flex
 
-        left_flanking_seq = left_flanking_seq[-5:].replace('N', '[ACGT]')
-        right_flanking_seq = right_flanking_seq[0:5].replace('N', '[ACGT]')
+        left_flanking_seq = left_flanking_seq.replace('N', '[ACGT]')
+        right_flanking_seq = right_flanking_seq.replace('N', '[ACGT]')
 
         self.re_pattern = re.compile("{0}((A|C|T|G){{{1},{2}}}){3}".format(
             left_flanking_seq, self.spacer_size_lims[0], self.spacer_size_lims[1], right_flanking_seq))
@@ -79,10 +80,19 @@ class SpacerCounter:
         return cls([left_flanking_seq, right_flanking_seq], 0, spacer_info_csv=spacer_info_csv, spacer_size_flex=spacer_size_flex)
 
 
-    def count_spacers(self, fastq_path, basename=None, threads=1):
+    def count_spacers(self, fastq_path, basename=None, threads=1, first_n=None):
+        start_time = time.time()
+
         # Extract spacers from the fastq file
         id_spacers = self.parse_fastq(fastq_path)
         id_spacers = [(id, spacer) for id, spacer in id_spacers if spacer != ""]
+
+        if first_n is not None:
+            id_spacers = id_spacers[:first_n]
+            print('  Only processing the first {0} spacers.'.format(first_n))
+
+        print("({1:.2f} seconds)".format(fastq_path, time.time() - start_time))
+        start_time = time.time()
         
         # Initialize dict based on spacer_df with an additional row for unknown spacers
         seq_count_dict = {}
@@ -96,7 +106,12 @@ class SpacerCounter:
                 seq_count_dict[spacer] += 1
             elif spacer != "":
                 unknown_spacer_list.append((id, spacer))
-        
+
+        print('  Out of total {0} total spacers, {1} ({2:.2%}) matched exactly to a known spacer.'.format(
+            len(id_spacers), len(id_spacers) - len(unknown_spacer_list), (len(id_spacers) - len(unknown_spacer_list)) / len(id_spacers)), end=' ')
+        print('({1:.2f} seconds)'.format(fastq_path, time.time() - start_time))
+        start_time = time.time()
+
         # sort the reference spacers by their count in descending order, and convert to tuple for caching
         # This way, the most common spacers will be aligned first, reducing the times of alignment needed.
         ref_spaer_list = [k for k, v in sorted(seq_count_dict.items(), key=lambda item: item[1], reverse=True)]
@@ -130,12 +145,15 @@ class SpacerCounter:
             else:
                 unknown_dict[unknown_seq] = 1
 
-        print('  Out of total {0} total spacers, {1} ({2:.2%}) were matched to a known spacer.'.format(
+        
+        print('  Out of {1} unknown spacers, {0} were recovered by pairwise alignment.'.format(
+            len(unknown_spacer_list) - len(unknown_spacer_list2), len(unknown_spacer_list)), end=' ')
+        print('  ({1:.2f} seconds)'.format(fastq_path, time.time() - start_time))
+
+        print('Summary: Out of total {0} spacers, {1} ({2:.2%}) were matched to a known spacer.'.format(
             len(id_spacers), len(id_spacers) - len(unknown_spacer_list2), 
             (len(id_spacers) - len(unknown_spacer_list2)) / len(id_spacers), self.spacer_size_flex))
-        print('    Among them, {0} needed alignment (not exact match). {1} remains as unknown even after alignment.'.format(
-            len(unknown_spacer_list), len(unknown_spacer_list2)))
-        print()
+        print('-' * 40 + '\n')
 
         output_df = self.spacer_df.copy()
         output_df['count'] = output_df['sequence'].map(seq_count_dict).fillna(0).astype(int)
@@ -178,7 +196,7 @@ class SpacerCounter:
             no_guide_count += 1
 
         print('  Out of total {0} reads, {1} ({2:.2%}) likely contain a spacer. (Flexibility = {3})'.format(
-            len(id_spacers), len(id_spacers) - no_guide_count, (len(id_spacers) - no_guide_count) / len(id_spacers), self.spacer_size_flex))
+            len(id_spacers), len(id_spacers) - no_guide_count, (len(id_spacers) - no_guide_count) / len(id_spacers), self.spacer_size_flex), end=' ')
 
         return id_spacers
     
@@ -194,8 +212,7 @@ def align2correct(spacer_tup, spacer):
     aligner.extend_gap_score = -0.5
 
     for index, ref_spacer in enumerate(spacer_tup):
-        align_re = aligner.align(spacer, ref_spacer)
-        if align_re.score > 0.9 * len(ref_spacer):
+        if aligner.score(spacer, ref_spacer) > 0.9 * len(ref_spacer):
             corrected_spacer = ref_spacer
             break
     
