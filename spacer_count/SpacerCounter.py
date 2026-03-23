@@ -4,6 +4,7 @@ import warnings
 import time
 from multiprocessing import Pool
 from functools import lru_cache, partial
+from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO, Align, Seq
@@ -12,7 +13,9 @@ from os import listdir
 
 class SpacerCounter:
 
-    def __init__(self, flanking_seqs, spacer_size=20, spacer_df=None, spacer_info_csv=None, spacer_size_flex=1):
+    ref_spacer_tup_dict = {}
+
+    def __init__(self, flanking_seqs, spacer_len=20, spacer_df=None, spacer_info_csv=None, spacer_size_flex=1):
         left_flanking_seq, right_flanking_seq = flanking_seqs
 
         if len(left_flanking_seq) < 5 or len(right_flanking_seq) < 5:
@@ -43,7 +46,7 @@ class SpacerCounter:
 
         else:
             print("No spacer info DataFrame provided; using spacer_size parameter.")
-            self.spacer_size_lims = [spacer_size - spacer_size_flex, spacer_size + spacer_size_flex]
+            self.spacer_size_lims = [spacer_len - spacer_size_flex, spacer_len + spacer_size_flex]
             self.spacer_df = pd.DataFrame(columns=["guide_id", "sequence", 'gene'])
 
 
@@ -116,7 +119,8 @@ class SpacerCounter:
         # This way, the most common spacers will be aligned first, reducing the times of alignment needed.
         ref_spaer_list = [k for k, v in sorted(seq_count_dict.items(), key=lambda item: item[1], reverse=True)]
         spacer_tup = tuple(ref_spaer_list)
-        align2correct_partial = partial(align2correct, spacer_tup)
+        SpacerCounter.ref_spacer_tup_dict[hash(spacer_tup)] = spacer_tup
+        align2correct_partial = partial(align2correct, hash(spacer_tup))
 
         if threads > 1:
             # Use multiprocessing to align unknown spacers in parallel
@@ -164,8 +168,8 @@ class SpacerCounter:
             unknown_df = pd.concat([unknown_df, pd.DataFrame([['unknown_spacer', unknown_seq, 'unknown_gene', count]], columns=output_df.columns)], ignore_index=True)
 
         if basename is not None:
-            output_df.to_csv(basename + "spacer_count.csv", index=False)
-            unknown_df.to_csv(basename + "unknown_spacer.csv", index=False)
+            output_df.to_csv(basename + "_known_{}.csv".format(Path(fastq_path).stem), index=False)
+            unknown_df.to_csv(basename + "_unknown_{}.csv".format(Path(fastq_path).stem), index=False)
 
         return output_df, unknown_df
 
@@ -202,8 +206,9 @@ class SpacerCounter:
     
 
 @lru_cache(maxsize=1024)
-def align2correct(spacer_tup, spacer):
+def align2correct(spacer_tup_hash, spacer):
     corrected_spacer = None
+    spacer_tup = SpacerCounter.ref_spacer_tup_dict[spacer_tup_hash]
 
     aligner = Align.PairwiseAligner()
     aligner.mode = 'local'
