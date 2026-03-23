@@ -15,7 +15,15 @@ dev = [
     "pytest-cov>=7.0.0",
 ]
 
+[project.scripts]
+spacer-count = "spacer_count.CLI:main"
+
 [tool.pytest.ini_options]
 pythonpath = [
   ".", "src",
 ]
+
+[tool.setuptools.packages.find]
+include = ["spacer_count*"]
+exclude = ["data*", 'tests*']
+

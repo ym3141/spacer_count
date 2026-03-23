@@ -89,12 +89,8 @@ class SpacerCounter:
         start_time = time.time()
 
         # Extract spacers from the fastq file
-        id_spacers = self.parse_fastq(fastq_path)
+        id_spacers = self.parse_fastq(fastq_path, first_n=first_n)
         id_spacers = [(id, spacer) for id, spacer in id_spacers if spacer != ""]
-
-        if first_n is not None:
-            id_spacers = id_spacers[:first_n]
-            print('  Only processing the first {0} spacers.'.format(first_n))
 
         print("({1:.2f} seconds)".format(fastq_path, time.time() - start_time))
         start_time = time.time()
@@ -120,7 +116,7 @@ class SpacerCounter:
         # sort the reference spacers by their count in descending order, and convert to tuple for caching
         # This way, the most common spacers will be aligned first, reducing the times of alignment needed.
         ref_spacer_list = [k for k, v in sorted(seq_count_dict.items(), key=lambda item: item[1], reverse=True)]
-        ref_spacer_str = ','.join(ref_spacer_list).encode()
+        ref_spacer_str = ','.join(ref_spacer_list).encode() # convert the list of reference spacers to a single string and encode to bytes for shared memory
     
         shm_ref = shared_memory.SharedMemory(create=True, size=len(ref_spacer_str))  # create a shared memory block
         shm_ref.buf[:] = ref_spacer_str  # write the reference spacers to shared memory
@@ -180,13 +176,20 @@ class SpacerCounter:
 
         return output_df, unknown_df
 
-    def parse_fastq(self, fastq_path):
+    def parse_fastq(self, fastq_path, first_n=None):
 
         print("Extracting spacers from file: {0}".format(fastq_path))
 
         id_spacers = []
         no_guide_count = 0
         id_sequences = load_fasta_to_seqs(fastq_path)
+
+        if first_n is not None and len(id_sequences) > first_n:
+            id_sequences = id_sequences[:first_n]
+            print("  Only processing the first {} sequences as specified by --first-n argument.".format(first_n))
+        elif first_n is not None:
+            print("  Warning: --first-n is set to {}, but file only has {} reads. Processing all reads.".format(first_n, len(id_sequences)))
+
         for id, seq in id_sequences:
 
             # Try the forward strand

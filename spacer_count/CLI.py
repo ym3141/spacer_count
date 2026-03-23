@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from SpacerCounter import SpacerCounter
+from .SpacerCounter import SpacerCounter
 
 def main():
     """Main entry point for the SpacerCounter CLI tool."""
@@ -37,8 +37,8 @@ def main():
         )
     parser.add_argument("--spacer-flex",
         type=int,
-        default=0,
-        help="Allowable flexibility in spacer length in the extracting step (default: 0)."
+        default=1,
+        help="Allowable flexibility in spacer length in the extracting step (default: 1)."
     )
     parser.add_argument("--spacer-info-csv",
         type=str,
