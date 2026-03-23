@@ -59,6 +59,8 @@ class SpacerCounter:
 
         self.re_pattern = re.compile("{0}((A|C|T|G){{{1},{2}}}){3}".format(
             left_flanking_seq, self.spacer_size_lims[0], self.spacer_size_lims[1], right_flanking_seq))
+        
+        print()
 
     '''
     Instance from fasta and csv files. 
@@ -160,7 +162,6 @@ class SpacerCounter:
         print('Summary: Out of total {0} spacers, {1} ({2:.2%}) were matched to a known spacer.'.format(
             len(id_spacers), len(id_spacers) - len(unknown_spacer_list2), 
             (len(id_spacers) - len(unknown_spacer_list2)) / len(id_spacers), self.spacer_size_flex))
-        print('-' * 40 + '\n')
 
         output_df = self.spacer_df.copy()
         output_df['count'] = output_df['sequence'].map(seq_count_dict).fillna(0).astype(int)
@@ -171,8 +172,10 @@ class SpacerCounter:
             unknown_df = pd.concat([unknown_df, pd.DataFrame([['unknown_spacer', unknown_seq, 'unknown_gene', count]], columns=output_df.columns)], ignore_index=True)
 
         if basename is not None:
+            print("Saving results to files: {}_(un)known_{}.csv".format(basename, Path(fastq_path).stem))
             output_df.to_csv(basename + "_known_{}.csv".format(Path(fastq_path).stem), index=False)
             unknown_df.to_csv(basename + "_unknown_{}.csv".format(Path(fastq_path).stem), index=False)
+        print('-' * 40 + '\n')
 
         return output_df, unknown_df
 
