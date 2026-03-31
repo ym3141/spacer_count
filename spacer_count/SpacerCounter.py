@@ -12,6 +12,8 @@ from Bio import SeqIO, Align, Seq
 
 from os import listdir
 
+from pw_align import correct_seq
+
 
 class SpacerCounter:
 
@@ -134,7 +136,8 @@ class SpacerCounter:
             # Align unknown spacers sequentially, this will benefit from lru_cache 
             corrected_results = []
             for id, spacer in unknown_spacer_list:
-                corrected_spacer = align2correct_mp(shm_ref.name, spacer)
+                corrected_spacer = correct_seq(ref_spacer_list, spacer, 3)
+                # corrected_spacer = align2correct_mp(shm_ref.name, spacer)
                 corrected_results.append((id, corrected_spacer))
         
         shm_ref.close()
@@ -142,7 +145,7 @@ class SpacerCounter:
         
         unknown_spacer_list2 = []
         for idx, (id, spacer) in enumerate(corrected_results):
-            if spacer is not None:
+            if spacer != "" and spacer is not None:
                 seq_count_dict[spacer] += 1
             else:
                 unknown_spacer_list2.append(unknown_spacer_list[idx])
