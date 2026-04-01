@@ -2,8 +2,6 @@ import gzip
 import re
 import warnings
 import time
-from multiprocessing import Pool, shared_memory
-from functools import lru_cache, partial
 from pathlib import Path
 
 import pandas as pd
@@ -12,7 +10,7 @@ from Bio import SeqIO, Align, Seq
 
 from os import listdir
 
-from pw_align import correct_seq
+from pw_align import correct_seq_mt
 
 
 class SpacerCounter:
@@ -120,28 +118,14 @@ class SpacerCounter:
         # sort the reference spacers by their count in descending order, and convert to tuple for caching
         # This way, the most common spacers will be aligned first, reducing the times of alignment needed.
         ref_spacer_list = [k for k, v in sorted(seq_count_dict.items(), key=lambda item: item[1], reverse=True)]
-        ref_spacer_str = ','.join(ref_spacer_list).encode() # convert the list of reference spacers to a single string and encode to bytes for shared memory
-    
-        shm_ref = shared_memory.SharedMemory(create=True, size=len(ref_spacer_str))  # create a shared memory block
-        shm_ref.buf[:] = ref_spacer_str  # write the reference spacers to shared memory
+        spacers_for_align = [spacer for _, spacer in unknown_spacer_list]
 
-        if threads > 1:
-            # Use multiprocessing to align unknown spacers in parallel
-            align2correct_partial = partial(align2correct_mp, shm_ref.name)
-            with Pool(threads) as pool:
-                corrected_spacers = pool.map(align2correct_partial, [spacer for _, spacer in unknown_spacer_list])
-            corrected_results = list(zip([id for id, _ in unknown_spacer_list], corrected_spacers))
-
-        else:
-            # Align unknown spacers sequentially, this will benefit from lru_cache 
-            corrected_results = []
-            for id, spacer in unknown_spacer_list:
-                corrected_spacer = correct_seq(ref_spacer_list, spacer, 3)
-                # corrected_spacer = align2correct_mp(shm_ref.name, spacer)
-                corrected_results.append((id, corrected_spacer))
+        if threads != 1 and threads * 10 > len(spacers_for_align):
+            print("    Only {} spacers need alignment, use single threaded mode instead.".format(len(spacers_for_align)))
+            threads = 1
+        corrected_results =  correct_seq_mt(ref_spacer_list, spacers_for_align, max_flex=self.spacer_size_flex, threads=threads)
+        corrected_results = list(zip([id for id, _ in unknown_spacer_list], corrected_results))
         
-        shm_ref.close()
-        shm_ref.unlink()
         
         unknown_spacer_list2 = []
         for idx, (id, spacer) in enumerate(corrected_results):
@@ -158,8 +142,8 @@ class SpacerCounter:
                 unknown_dict[unknown_seq] = 1
 
         
-        print('  Out of {1} unknown potential spacers, {0} were recovered by pairwise alignment.\t'.format(
-            len(unknown_spacer_list) - len(unknown_spacer_list2), len(unknown_spacer_list)), end=' ')
+        print('  Out of {1} unknown potential spacers, {0} were recovered by alignment. (T = {2})\t'.format(
+            len(unknown_spacer_list) - len(unknown_spacer_list2), len(unknown_spacer_list), threads), end=' ')
         print('  ({1:.2f} seconds)'.format(fastq_path, time.time() - start_time))
 
         print('Summary: Out of total {0} spacers, {1} ({2:.2%}) were matched to a known spacer.'.format(
@@ -220,27 +204,6 @@ class SpacerCounter:
 
         return id_spacers
     
-
-@lru_cache(maxsize=1024)
-def align2correct_mp(shm_name, spacer):
-    # This function is used for multiprocessing, where we need to access the shared memory to get the reference spacers
-    existing_shm = shared_memory.SharedMemory(name=shm_name)
-    ref_spacer_str = bytes(existing_shm.buf)
-    ref_spacer_list = ref_spacer_str.decode().split(',')
-
-    aligner = Align.PairwiseAligner()
-    aligner.mode = 'local'
-    aligner.match_score = 1
-    aligner.open_gap_score = -0.5
-    aligner.extend_gap_score = -0.5
-
-    corrected_spacer = None
-    for index, ref_spacer in enumerate(ref_spacer_list):
-        if aligner.score(spacer, ref_spacer) > 0.9 * len(ref_spacer):
-            corrected_spacer = ref_spacer
-            break
-    
-    return (corrected_spacer)
 
 
 def load_fasta_to_seqs(fastq_path):

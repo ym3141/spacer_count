@@ -7,7 +7,68 @@ mod pw_align {
     use std::cmp::{max, min};
 
     #[pyfunction]
-    fn correct_seq(ref_seqs: Vec<String>, query_seq: &str, max_flex: isize) -> PyResult<String> {
+    fn correct_seq_mt(ref_seqs: Vec<String>, query_seqs: Vec<String>, max_flex: isize, threads: usize) -> Vec<String> {
+
+        if threads == 1 {
+            let mut results = Vec::new();
+            for seq in &query_seqs {
+                let result = correct_seq(&ref_seqs, seq, max_flex);
+                results.push(result);
+            }
+            return results;
+
+        } else if threads > 1 {
+            use std::thread;
+            use std::sync::Arc;
+
+            let chunk_size = (query_seqs.len() + threads - 1) / threads; // Calculate chunk size for each thread
+            let mut shared_seq_chunks = Vec::new();
+            for i in 0..threads {
+                let start = i * chunk_size;
+                let end = min(start + chunk_size, query_seqs.len());
+                if start < end {
+                    shared_seq_chunks.push(Arc::new(query_seqs[start..end].to_vec()));
+                }
+            }
+
+            let shared_ref_seqs = Arc::new(ref_seqs);
+            let mut handles = Vec::new();
+
+            for i in 0..threads {
+                let ref_seqs_clone = Arc::clone(&shared_ref_seqs);
+                let seq_chunk_clone = Arc::clone(&shared_seq_chunks[i]);
+                let handle = thread::spawn(move || {
+                    // println!("    Thread {} is aligning {} sequences.", i + 1, seq_chunk.len());
+                    let mut chunk_results = Vec::new();
+                    for seq in seq_chunk_clone.iter() {
+                        let result = correct_seq(&ref_seqs_clone, seq, max_flex);
+                        chunk_results.push(result);
+                    }
+                    chunk_results
+                });
+                handles.push(handle);
+            }
+
+            let mut results_vec = Vec::new();
+            for handle in handles {
+                let result = handle.join().unwrap();
+                results_vec.push(result);
+            }
+            
+            let mut all_results = Vec::new();
+            for chunk in results_vec {
+                all_results.extend(chunk);
+            }
+
+            return all_results;
+
+        } else {
+            return Vec::new(); // return an empty vector if threads is 0 or negative, which should not happen
+        }
+    }
+
+    // #[pyfunction]
+        fn correct_seq(ref_seqs: &Vec<String>, query_seq: &str, max_flex: isize) -> String {
 
         let query_len = query_seq.len() as isize;
         let query_count_A = query_seq.chars().filter(|&c| c == 'A').count() as isize;
@@ -25,11 +86,11 @@ mod pw_align {
             }
 
             if nw_align_bool(&ref_seq, query_seq, max_flex) {
-                return Ok(ref_seq); // Return the first reference sequence that passes the checks
+                return ref_seq.clone(); // Return the first reference sequence that passes the checks
                 }
 
         }
-        Ok("".to_string()) // Return a empty string if no reference sequence matches
+        "".to_string() // Return a empty string if no reference sequence matches
     }
 
 
@@ -54,12 +115,6 @@ mod pw_align {
 
         // Initialize the scoring matrix, seq1 is longer on top and seq2 is shorter on the left
         let mut matrix = vec![vec![0; (len1 + 1) as usize]; (len2 + 1) as usize];
-        for i in 0..=len1 {
-            matrix[0][i as usize] = (i as isize) * GAP_PENALTY;
-        }
-        for j in 0..=len2 {
-            matrix[j as usize][0] = (j as isize) * GAP_PENALTY;
-        }
 
         let seq1_vec: Vec<char> = seq1.chars().collect();
         let seq2_vec: Vec<char> = seq2.chars().collect();
