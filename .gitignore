@@ -16,3 +16,6 @@ data/*
 
 # Rust target directory
 target/
+
+# vscode settings
+.vscode/
