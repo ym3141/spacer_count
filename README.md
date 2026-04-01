@@ -1,8 +1,6 @@
 **spacer_count** is a versatile counter for spacers or barcodes from whole-plasimid (or similar type) sequencing outputs. It uses regex and pairwise alignment for sapcer detection, therefore it reliably count spacers appearing in **any** position and orientation in the read, and tolerate error (substitution and in-del). Thus, it can be used directly on vairous outputs from whole-plasmid sequencing (long-reads), staggered amplicon, or simply reads without trimming.  
 
-Performance optimization:
-1. Multiprocessing if enabled for pairwise alignment. 
-2. LRU caching is enabled to accelerate error correction
+The core alignment and parallelization code is now written in Rust for optimal performance.  
 
 # Quick start
 To install, simply run:
@@ -24,7 +22,9 @@ If no input files are provided, all the spacers will be counted in the `unknown`
 
 Example: 
 
-`spacer-count --o data/test --spacer-info-csv data/spacer_info.csv --flanking NGATG-ATGTGGTC -t 4 data/*.fastq`
+```
+spacer-count --o data/test --spacer-info-csv data/spacer_info.csv --flanking NGATG-ATGTGGTC -t 4 data/*.fastq
+```
 
 More argument help is accissbile via `spacer-count --help`
 
