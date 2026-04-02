@@ -5,16 +5,26 @@ use pyo3::prelude::*;
 mod pw_align {
     use pyo3::prelude::*;
     use std::cmp::{max, min};
+    use std::io::{self, Write};
 
     #[pyfunction]
     fn correct_seq_mt(ref_seqs: Vec<String>, query_seqs: Vec<String>, max_flex: isize, threads: usize) -> Vec<String> {
 
+        print!("    Aligning with {} threads: ", threads);
+        io::stdout().flush().unwrap();
+
         if threads == 1 {
             let mut results = Vec::new();
-            for seq in &query_seqs {
+            let progress_interval = max(1, query_seqs.len() / 50); // Print progress every 2% of the sequences
+            for (idx, seq) in query_seqs.iter().enumerate() {
+                if idx % progress_interval == 0 {
+                    print!("\u{25A0}");
+                    io::stdout().flush().unwrap();
+                }
                 let result = correct_seq(&ref_seqs, seq, max_flex);
                 results.push(result);
             }
+            println!(); // Move to the next line after progress bar
             return results;
 
         } else if threads > 1 {
@@ -33,14 +43,20 @@ mod pw_align {
 
             let shared_ref_seqs = Arc::new(ref_seqs);
             let mut handles = Vec::new();
+            let progress_interval = chunk_size / 50 * threads; // Print progress after each chunk is processed
 
             for i in 0..threads {
                 let ref_seqs_clone = Arc::clone(&shared_ref_seqs);
                 let seq_chunk_clone = Arc::clone(&shared_seq_chunks[i]);
                 let handle = thread::spawn(move || {
-                    // println!("    Thread {} is aligning {} sequences.", i + 1, seq_chunk.len());
                     let mut chunk_results = Vec::new();
-                    for seq in seq_chunk_clone.iter() {
+                    for (idx, seq) in seq_chunk_clone.iter().enumerate() {
+
+                        if (idx + i) % progress_interval == 0 {
+                            print!("\u{25A0}");
+                            io::stdout().flush().unwrap();
+                        }
+
                         let result = correct_seq(&ref_seqs_clone, seq, max_flex);
                         chunk_results.push(result);
                     }
@@ -59,7 +75,7 @@ mod pw_align {
             for chunk in results_vec {
                 all_results.extend(chunk);
             }
-
+            println!(); // Move to the next line after progress bar
             return all_results;
 
         } else {

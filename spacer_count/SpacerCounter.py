@@ -142,8 +142,8 @@ class SpacerCounter:
                 unknown_dict[unknown_seq] = 1
 
         
-        print('  Out of {1} unknown potential spacers, {0} were recovered by alignment. (T = {2})\t'.format(
-            len(unknown_spacer_list) - len(unknown_spacer_list2), len(unknown_spacer_list), threads), end=' ')
+        print('  Out of {1} unknown potential spacers, {0} were recovered by pairwise alignment.\t'.format(
+            len(unknown_spacer_list) - len(unknown_spacer_list2), len(unknown_spacer_list)), end=' ')
         print('  ({1:.2f} seconds)'.format(fastq_path, time.time() - start_time))
 
         print('Summary: Out of total {0} spacers, {1} ({2:.2%}) were matched to a known spacer.'.format(
