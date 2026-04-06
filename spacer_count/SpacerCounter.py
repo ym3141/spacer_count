@@ -10,7 +10,11 @@ from Bio import SeqIO, Align, Seq
 
 from os import listdir
 
-from pw_align import correct_seq_mt
+try:
+    from .pw_align import correct_seq_mt
+except ImportError:
+    # Fallback for development environments where the extension is top-level.
+    from pw_align import correct_seq_mt
 
 
 class SpacerCounter:

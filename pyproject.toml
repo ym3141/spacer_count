@@ -8,17 +8,22 @@ dependencies = [
     "biopython>1.84",
     "maturin>=1.12.6",
     "pandas>2.2",
+    "numpy<2.0"
 ]
 
 [build-system]
 requires = ["maturin>=1.12,<2.0"]
 build-backend = "maturin"
 
+[tool.maturin]
+python-source = "."
+module-name = "spacer_count.pw_align"
+
 # For uv to rebuild with maturin if any of these files change
 [tool.uv]
 cache-keys = [{file = "pyproject.toml"}, {file = "Cargo.toml"}, {file = "**/*.rs"}]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
