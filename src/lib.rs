@@ -8,7 +8,6 @@ mod pw_align {
     use std::io::{self, Write};
 
     #[pyfunction]
-    
     fn correct_seq_mt(ref_seqs: Vec<String>, query_seqs: Vec<String>, max_flex: isize, threads: usize) -> Vec<String> {
 
         print!("    Aligning with {} threads: ", threads);
