@@ -8,6 +8,7 @@ mod pw_align {
     use std::io::{self, Write};
 
     #[pyfunction]
+    
     fn correct_seq_mt(ref_seqs: Vec<String>, query_seqs: Vec<String>, max_flex: isize, threads: usize) -> Vec<String> {
 
         print!("    Aligning with {} threads: ", threads);
@@ -43,7 +44,7 @@ mod pw_align {
 
             let shared_ref_seqs = Arc::new(ref_seqs);
             let mut handles = Vec::new();
-            let progress_interval = chunk_size / 50 * threads; // Print progress after each chunk is processed
+            let progress_interval = max(chunk_size / 50 * threads, 2); // Print progress after each chunk is processed
 
             for i in 0..threads {
                 let ref_seqs_clone = Arc::clone(&shared_ref_seqs);
@@ -83,8 +84,8 @@ mod pw_align {
         }
     }
 
-    // #[pyfunction]
-        fn correct_seq(ref_seqs: &Vec<String>, query_seq: &str, max_flex: isize) -> String {
+    #[allow(non_snake_case)]
+    fn correct_seq(ref_seqs: &Vec<String>, query_seq: &str, max_flex: isize) -> String {
 
         let query_len = query_seq.len() as isize;
         let query_count_A = query_seq.chars().filter(|&c| c == 'A').count() as isize;
@@ -124,20 +125,22 @@ mod pw_align {
             panic!("max_flex cannot be greater than the length of the sequences.");
         }
 
+        let (mut _seq1, mut _seq2) = (seq1, seq2);
+        let (mut _len1, mut _len2) = (len1, len2);
         if len1 < len2 {
-            let (seq1, seq2) = (seq2, seq1); // Ensure seq1 is the shorter sequence
-            let (len1, len2) = (len2, len1);
+            let (_seq1, _seq2) = (seq2, seq1); // Ensure seq1 is the shorter sequence
+            let (_len1, _len2) = (len2, len1);
         }
 
         // Initialize the scoring matrix, seq1 is longer on top and seq2 is shorter on the left
-        let mut matrix = vec![vec![0; (len1 + 1) as usize]; (len2 + 1) as usize];
+        let mut matrix = vec![vec![0; (_len1 + 1) as usize]; (_len2 + 1) as usize];
 
-        let seq1_vec: Vec<char> = seq1.chars().collect();
-        let seq2_vec: Vec<char> = seq2.chars().collect();
+        let seq1_vec: Vec<char> = _seq1.chars().collect();
+        let seq2_vec: Vec<char> = _seq2.chars().collect();
 
 
-        for i in 1..len1 + 1 {
-            for j in 1..len2 + 1 {
+        for i in 1.._len1 + 1 {
+            for j in 1.._len2 + 1 {
                 let idx = i as usize;
                 let jdx = j as usize;
 

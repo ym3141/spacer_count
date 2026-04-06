@@ -1,5 +1,5 @@
 import pytest
-from pw_align import correct_seq_mt
+from spacer_count.pw_align import correct_seq_mt
 from random import choices
 
 def test_correct_seq():
