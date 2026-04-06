@@ -18,3 +18,17 @@ def test_correct_seq_auto():
     for _ in range(100):
         ref_list.append(''.join(choices('ACGT', k=22)))
 
+    for idx in choices(range(100), k=10):
+        seq = ref_list[idx]
+        assert correct_seq_mt(ref_list, [seq], 0, 1) == [seq]
+        for i in range(1, 4):
+            seq_mut = list(seq)
+            for _ in range(i):
+                pos = choices(range(22), k=1)[0]
+                seq_mut[pos] = choices('ACGT ', k=1)[0]
+            seq_mut = ''.join(seq_mut)
+            if seq_mut == seq:
+                continue
+            assert seq_mut != seq
+            assert correct_seq_mt(ref_list, [seq_mut], i, 1) == [seq]
+
