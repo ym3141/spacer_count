@@ -1,5 +1,5 @@
 from spacer_count.SpacerCounter import SpacerCounter
-import pw_align
+from spacer_count import pw_align
 
 if __name__ == "__main__":
     counter = SpacerCounter(['NGATG', 'ATGTGGTC'], spacer_size_flex=2, spacer_info_csv='data/spacer_info.csv')
