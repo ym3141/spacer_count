@@ -7,7 +7,7 @@ To install, simply run:
 `pip install spacer_count`
 
 ## Input format
-The csv file needed for defining known spacer in **spacer_count**, is the same as the [sgRNA file used by MAGeCK](https://sourceforge.net/p/mageck/wiki/input/#h-sgrna-library-file). Briefly, a no header, three-column csv file is used as input.
+The csv file needed for defining known spacer in **spacer_count**, is the same as the [sgRNA file used by MAGeCK](https://sourceforge.net/p/mageck/wiki/input/#h-sgrna-library-file). Briefly, a **no header**, three-column csv file is used as input.
 
 ```
 s_10007,TGTTCACAGTATAGTTTGCC,CCNA1
