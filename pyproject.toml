@@ -1,6 +1,6 @@
 [project]
 name = "spacer-count"
-version = "0.2.2"
+version = "0.2.3"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -22,12 +22,6 @@ module-name = "spacer_count.pw_align"
 [tool.uv]
 cache-keys = [{file = "pyproject.toml"}, {file = "Cargo.toml"}, {file = "**/*.rs"}]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
-]
-
 [project.scripts]
 spacer-count = "spacer_count.CLI:main"
 
@@ -39,4 +33,9 @@ pythonpath = [
 [tool.setuptools.packages.find]
 include = ["spacer_count*"]
 exclude = ["data*", 'tests*']
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
 

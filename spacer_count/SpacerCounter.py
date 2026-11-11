@@ -84,6 +84,15 @@ class SpacerCounter:
             raise Exception("Flanking sequences must be at least 5 bases long.")
 
         spacer_df = pd.read_csv(spacer_info_csv, header=None, names=["guide_id", "sequence", 'gene'])
+
+        # If any sequence is invalid, assume the CSV contains a header row.
+        valid_bases = set("ATCG")
+        for base in spacer_df['sequence'][0].upper():
+            if not (base in valid_bases):
+                warnings.warn('First spacer in spacer info csv not legit --> reload the file assuming there is a header')
+                spacer_df = pd.read_csv(spacer_info_csv, header=0, names=["guide_id", "sequence", 'gene'])
+                break
+
         spacer_df['sequence'] = spacer_df['sequence'].str.upper()
         spacer_df['guide_id'] = spacer_df['guide_id'].astype(str)
         spacer_df['gene'] = spacer_df['gene'].astype(str)
